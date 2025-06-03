@@ -107,9 +107,50 @@ Body* Parser::parseBody() {
 
 
 Program* Parser::parseProgram() {
-    Body* b = parseBody();
-    return new Program(b);
+    Program* p = new Program();
+    p->vardecs = parseVarDecList();
+    p->fundecs = parseFunDecList();
+    return p;
 }
+
+FunDecList* Parser::parseFunDecList() {
+    FunDecList* vdl = new FunDecList();
+    FunDec* aux;
+    aux = parseFunDec();
+    while (aux != NULL) {
+        vdl->add(aux);
+        aux = parseFunDec();
+    }
+    return vdl;
+}
+
+
+FunDec* Parser::parseFunDec() {
+    FunDec* vd = NULL;
+    if (match(Token::FUN)) {
+        FunDec* fu = new FunDec();
+        match(Token::ID);
+        fu->tipo = previous->text;
+        match(Token::ID);
+        fu->nombre = previous->text;
+        match(Token::PI);
+
+        while(match(Token::ID)) {
+            fu->tipos.push_back(previous->text);
+            match(Token::ID);
+            fu->parametros.push_back(previous->text);
+            if (!match(Token::COMA)) {
+                break;
+            }
+        }
+        match(Token::PD);
+        fu->cuerpo = parseBody();
+        match(Token::ENDFUN);
+        vd = fu;
+    }
+    return vd;
+}
+
 
 list<Stm*> Parser::parseStmList() {
     list<Stm*> slist;
@@ -152,13 +193,20 @@ Stm* Parser::parseStatement() {
         }
         s = new PrintStatement(e);
     }
+    else if (match(Token::RETURN)) {
+        ReturnStatement* rs = new ReturnStatement();
+        match(Token::PI);
+        rs->e = parseCExp();
+        match(Token::PD);
+        return rs;
+    }
     else if (match(Token::IF)) {
         e = parseCExp();
         if (!match(Token::THEN)) {
             cout << "Error: se esperaba 'then' después de la expresión." << endl;
             exit(1);
         }
-        
+
         tb = parseBody();
 
         if (match(Token::ELSE)) {
